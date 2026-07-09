@@ -11,7 +11,7 @@ public class NodeApplication {
         SpringApplication.run(NodeApplication.class, args);
     }
 
-    // 提供一个 RestClient,Leader 用它向 Follower 发请求
+    // Provides a RestClient the leader uses to send requests to followers
     @Bean
     public RestClient restClient() {
         return RestClient.create();

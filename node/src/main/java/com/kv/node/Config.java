@@ -8,16 +8,16 @@ import java.util.List;
 
 @Component
 public class Config {
-    // 角色:"leader" 或 "follower"
+    // Role: "leader" or "follower"
     @Value("${ROLE:leader}")
     public String role;
 
-    // follower 的地址列表,逗号分隔(只有 leader 用得上)
-    // 例如:http://node2:8080,http://node3:8080,...
+    // Comma-separated list of follower URLs (only the leader uses these)
+    // e.g. http://node2:8080,http://node3:8080,...
     @Value("${FOLLOWER_URLS:}")
     private String followerUrlsRaw;
 
-    // 写quorum、读quorum
+    // Write quorum and read quorum
     @Value("${WRITE_QUORUM_SIZE:1}")
     public int writeQuorum;
 

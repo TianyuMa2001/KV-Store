@@ -11,15 +11,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class LoadTester {
 
-    // ===== 可调参数 =====
+    // ===== Tunable parameters =====
     static final int THREADS = 16;
     static final int TOTAL_REQUESTS = 2000;
     static final int KEY_POOL_SIZE = 20;
-    static final double WRITE_RATIO = 0.9;     // 改这个测四种读写比:0.01/0.10/0.50/0.90
+    static final double WRITE_RATIO = 0.9;     // change this to test different read/write ratios: 0.01/0.10/0.50/0.90
 
-    // 读模式开关:
-    //  true  = quorum读(打/kv,该节点按R收集多节点取最新)—— 测quorum能否消除stale
-    //  false = local读(打/local_read,直接看单节点)—— 测节点间滞后程度
+    // Read-mode switch:
+    //  true  = quorum read (hits /kv; the node collects from R nodes and takes the newest) — tests whether quorum removes stale reads
+    //  false = local read (hits /local_read; reads a single node directly) — measures inter-node lag
     static final boolean QUORUM_READ = true;
 
     static final String LEADER = "http://localhost:8080";
@@ -28,7 +28,7 @@ public class LoadTester {
             "http://localhost:8083", "http://localhost:8084"
     };
 
-    // ===== 共享统计 =====
+    // ===== Shared statistics =====
     static final ConcurrentHashMap<String, Long> lastWrittenVersion = new ConcurrentHashMap<>();
     static final AtomicInteger staleReads = new AtomicInteger(0);
     static final AtomicInteger totalReads = new AtomicInteger(0);
@@ -44,8 +44,8 @@ public class LoadTester {
                 .build();
         ExecutorService pool = Executors.newFixedThreadPool(THREADS);
 
-        System.out.println("开始压测: " + TOTAL_REQUESTS + " 请求, " + THREADS + " 线程, 写比例 "
-                + WRITE_RATIO + ", 读模式=" + (QUORUM_READ ? "quorum(/kv)" : "local(/local_read)"));
+        System.out.println("Starting load test: " + TOTAL_REQUESTS + " requests, " + THREADS + " threads, write ratio "
+                + WRITE_RATIO + ", read mode=" + (QUORUM_READ ? "quorum(/kv)" : "local(/local_read)"));
         long startTime = System.currentTimeMillis();
 
         AtomicInteger done = new AtomicInteger(0);
@@ -61,7 +61,7 @@ public class LoadTester {
                     errors.incrementAndGet();
                 }
                 int d = done.incrementAndGet();
-                if (d % 200 == 0) System.out.println("已完成 " + d + " / " + TOTAL_REQUESTS);
+                if (d % 200 == 0) System.out.println("completed " + d + " / " + TOTAL_REQUESTS);
             }));
         }
 
@@ -92,7 +92,7 @@ public class LoadTester {
     }
 
     static void doRead(HttpClient client, String key) throws Exception {
-        // 选节点:quorum读也轮流打不同节点当协调者;local读直接戳单节点
+        // Pick a node: quorum reads also round-robin across nodes as coordinator; local reads hit a single node directly
         String node = ALL_NODES[readNodeCounter.getAndIncrement() % ALL_NODES.length];
         String path = QUORUM_READ ? ("/kv/" + key) : ("/local_read/" + key);
 
@@ -131,16 +131,16 @@ public class LoadTester {
 
     static void printReport(long wallTime) {
         System.out.println("\n========== LOAD TEST REPORT ==========");
-        System.out.println("读模式: " + (QUORUM_READ ? "quorum(/kv)" : "local(/local_read)"));
-        System.out.println("总请求数: " + (totalReads.get() + totalWrites.get()));
-        System.out.println("写请求: " + totalWrites.get() + " | 读请求: " + totalReads.get() + " | 错误: " + errors.get());
-        System.out.println("总耗时: " + wallTime + " ms | 吞吐量: "
+        System.out.println("Read mode: " + (QUORUM_READ ? "quorum(/kv)" : "local(/local_read)"));
+        System.out.println("Total requests: " + (totalReads.get() + totalWrites.get()));
+        System.out.println("Writes: " + totalWrites.get() + " | Reads: " + totalReads.get() + " | Errors: " + errors.get());
+        System.out.println("Wall time: " + wallTime + " ms | Throughput: "
                 + String.format("%.1f", (totalReads.get() + totalWrites.get()) * 1000.0 / wallTime) + " req/s");
         int reads = Math.max(1, totalReads.get());
         System.out.println("Stale reads: " + staleReads.get() + " / " + totalReads.get()
                 + " (" + String.format("%.1f", staleReads.get() * 100.0 / reads) + "%)");
-        System.out.println("写延迟 平均: " + avgMs(writeLatencies) + " ms, P99: " + p99Ms(writeLatencies) + " ms");
-        System.out.println("读延迟 平均: " + avgMs(readLatencies) + " ms, P99: " + p99Ms(readLatencies) + " ms");
+        System.out.println("Write latency avg: " + avgMs(writeLatencies) + " ms, P99: " + p99Ms(writeLatencies) + " ms");
+        System.out.println("Read latency avg: " + avgMs(readLatencies) + " ms, P99: " + p99Ms(readLatencies) + " ms");
         System.out.println("======================================");
     }
 

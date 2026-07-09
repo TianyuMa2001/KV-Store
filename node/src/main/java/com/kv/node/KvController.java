@@ -13,36 +13,36 @@ public class KvController {
     private final Config config;
     private final RestClient restClient;
 
-    // Spring 会自动把 Config 和 RestClient 注入进来
+    // Spring injects Config and RestClient automatically
     public KvController(Config config, RestClient restClient) {
         this.config = config;
         this.restClient = restClient;
     }
 
-    // ========== 写:PUT /kv ==========
+    // ========== Write: PUT /kv ==========
     @PutMapping("/kv")
     public ResponseEntity<Map<String, Object>> put(@RequestBody PutRequest req) throws InterruptedException {
-        // 只有 Leader 处理客户端写(作业规定写全发给 Leader)
+        // Only the leader handles client writes (all writes go to the leader)
         if (!config.isLeader()) {
             return ResponseEntity.status(400).body(Map.of("error", "writes must go to leader"));
         }
 
-        // 1. Leader 分配版本号
+        // 1. Leader assigns the version number
         VersionedValue existing = store.get(req.key);
         long newVersion = (existing == null) ? 1 : existing.version + 1;
 
-        // 2. Leader 先写自己,成功数从 1 起算
+        // 2. Leader writes to itself first; ack count starts at 1
         int acks = 1;
         store.put(req.key, new VersionedValue(req.value, newVersion));
 
-        // 3. 挨个同步给 Follower,直到达到 W 个确认就停止发送剩下的
+        // 3. Replicate to followers one by one; stop once W acks are reached
         for (String followerUrl : config.followerUrls()) {
-            if (acks >= config.writeQuorum) break;  // 已够 W 个,不用再发
+            if (acks >= config.writeQuorum) break;  // already have W, no need to send more
             try {
                 ReplicateRequest rr = new ReplicateRequest();
                 rr.key = req.key;
                 rr.value = req.value;
-                rr.version = newVersion;   // 用 Leader 分配的版本号
+                rr.version = newVersion;   // use the version assigned by the leader
                 restClient.put()
                         .uri(followerUrl + "/replicate")
                         .body(rr)
@@ -54,10 +54,10 @@ public class KvController {
             }
         }
 
-        // 4. Leader 自己 sleep 200ms(作业规定:同步完 Follower 后,Leader 模拟自己落盘)
+        // 4. Leader sleeps 200ms (simulates the leader persisting after replicating to followers)
         Thread.sleep(200);
 
-        // 5. 达到 W 就成功
+        // 5. Success once W is reached
         if (acks >= config.writeQuorum) {
             return ResponseEntity.status(201).body(Map.of("key", req.key, "version", newVersion));
         } else {
@@ -65,20 +65,20 @@ public class KvController {
         }
     }
 
-    // ========== 读:GET /kv/{key} ==========
+    // ========== Read: GET /kv/{key} ==========
     @GetMapping("/kv/{key}")
     public ResponseEntity<VersionedValue> get(@PathVariable String key) throws InterruptedException {
-        Thread.sleep(50);  // 读延迟
+        Thread.sleep(50);  // read delay
 
-        // R=1:只读本节点
+        // R=1: read this node only
         if (config.readQuorum <= 1) {
             VersionedValue v = store.get(key);
             if (v == null) return ResponseEntity.notFound().build();
             return ResponseEntity.ok(v);
         }
 
-        // R>1:读自己 + 问 (R-1) 个 Follower,取版本号最大的
-        VersionedValue best = store.get(key);   // 可能为 null
+        // R>1: read self + query (R-1) followers, take the highest version
+        VersionedValue best = store.get(key);   // may be null
         int collected = 1;
 
         for (String followerUrl : config.followerUrls()) {
@@ -89,7 +89,7 @@ public class KvController {
                         .retrieve()
                         .body(VersionedValue.class);
                 collected++;
-                // 取版本号更大的
+                // keep the one with the higher version
                 if (v != null && (best == null || v.version > best.version)) {
                     best = v;
                 }
@@ -102,7 +102,7 @@ public class KvController {
         return ResponseEntity.ok(best);
     }
 
-    // ========== local_read:只看本节点(测试用,不 sleep)==========
+    // ========== local_read: this node only (for testing, no sleep) ==========
     @GetMapping("/local_read/{key}")
     public ResponseEntity<VersionedValue> localRead(@PathVariable String key) {
         VersionedValue v = store.get(key);
@@ -110,11 +110,11 @@ public class KvController {
         return ResponseEntity.ok(v);
     }
 
-    // ========== replicate:Follower 接收 Leader 同步(内部端点)==========
+    // ========== replicate: follower receives replication from the leader (internal endpoint) ==========
     @PutMapping("/replicate")
     public ResponseEntity<Void> replicate(@RequestBody ReplicateRequest req) throws InterruptedException {
-        Thread.sleep(200);  // Follower 收到写也 sleep 200ms
-        store.put(req.key, new VersionedValue(req.value, req.version));  // 用 Leader 给的版本号
+        Thread.sleep(200);  // follower also sleeps 200ms on a write
+        store.put(req.key, new VersionedValue(req.value, req.version));  // use the version from the leader
         return ResponseEntity.status(201).build();
     }
 }

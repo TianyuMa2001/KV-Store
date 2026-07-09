@@ -1,6 +1,6 @@
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-# 把打好的 jar 复制进镜像(星号匹配版本号,省得写死)
+# Copy the built jar into the image (wildcard matches the version so it isn't hardcoded)
 COPY target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
