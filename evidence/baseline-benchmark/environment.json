@@ -1,0 +1,25 @@
+{
+  "platform": "Windows-11-10.0.26100-SP0",
+  "python": "3.12.14",
+  "cpu_count": 20,
+  "java": "java version \"17.0.17\" 2025-10-21 LTS\nJava(TM) SE Runtime Environment (build 17.0.17+8-LTS-360)\nJava HotSpot(TM) 64-Bit Server VM (build 17.0.17+8-LTS-360, mixed mode, sharing)\n",
+  "args": {
+    "jar": "evidence\\baseline\\node-baseline.jar",
+    "output": "evidence\\baseline-benchmark",
+    "java": "java",
+    "port": 18080,
+    "threads": 16,
+    "keys": 20,
+    "requests": 600,
+    "warmup": 200,
+    "repeats": 3,
+    "seed": 42,
+    "timeout_ms": 1000,
+    "read_mode": "quorum",
+    "full": false,
+    "baseline": true
+  },
+  "jar_sha256": "e92e7124ba3382cd02f384c032efb8582091af5be6cf1a97627ff1f4e804308f",
+  "benchmark_sha256": "e5bde270c5422529284ff4bc9810b55819c2e2e2f585b8df33614ac0fdd18f37",
+  "baseline_commit": "06d39f91b6d69710f255adb506f1133367126f5f"
+}

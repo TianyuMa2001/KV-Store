@@ -1,0 +1,25 @@
+{
+  "platform": "Windows-11-10.0.26100-SP0",
+  "python": "3.12.14",
+  "cpu_count": 20,
+  "java": "java version \"17.0.17\" 2025-10-21 LTS\nJava(TM) SE Runtime Environment (build 17.0.17+8-LTS-360)\nJava HotSpot(TM) 64-Bit Server VM (build 17.0.17+8-LTS-360, mixed mode, sharing)\n",
+  "args": {
+    "jar": "D:\\2025MTY\\Projects\\Properties\\kv-work\\node\\target\\node-0.0.1-SNAPSHOT.jar",
+    "output": "evidence\\benchmark-final",
+    "java": "java",
+    "port": 18380,
+    "threads": 16,
+    "keys": 20,
+    "requests": 600,
+    "warmup": 200,
+    "repeats": 3,
+    "seed": 42,
+    "timeout_ms": 1000,
+    "read_mode": "quorum",
+    "full": false,
+    "baseline": false
+  },
+  "jar_sha256": "a7ee3a23a6b51b4874532fd3f72eec915f6603e34e9250e163ef21f0ca506472",
+  "benchmark_sha256": "e4fd8ebdb3254ba6bdbfea7760852f06688487f43a84b861041c87b62078699d",
+  "baseline_commit": "06d39f91b6d69710f255adb506f1133367126f5f"
+}
