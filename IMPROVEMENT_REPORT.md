@@ -16,7 +16,7 @@ This is not Raft or Paxos. It does not provide persistence, automatic leader ele
 | Reads treated 404 as an exception rather than evidence of absence | Reachable 404 responses count toward R; select the highest collected version | Missing keys return 404 after quorum; mixed-version reads select the newest |
 | Slow peers could delay operations without clear failure semantics | Configurable connect/read/quorum timeouts; failed W returns 503 with `status=indeterminate` and `localApplied=true` | Timeout/partial-write test passes |
 | Configuration lacked range validation | Validate W/R, timeouts, delays, and thread counts; trim/deduplicate peer URLs | Invalid configuration fails early |
-| Limited observability | `/health` reports role, failed replications, queued tasks, and active tasks | Supports demonstrations and fault diagnosis |
+| Limited observability | `/health` reports serving PID, role, effective W/R and timing configuration, failed replications, queued tasks, and active tasks | Enables process/configuration verification and fault diagnosis |
 
 ## Operation Semantics
 
@@ -38,44 +38,61 @@ The final Maven run on September 13, 2026 passed all 10 tests with zero failures
 
 The original implementation failed all three core correctness tests. This comparison demonstrates fixes for reproducible defects rather than merely increasing test count.
 
-## Benchmark Method
+All four Python harness regression tests also pass: acknowledgement validation, unreachable-replica write rejection, valid quorum acceptance, and listening-port detection.
 
-`benchmark.py` uses the Python standard library to start five real JVM nodes. It uses deterministic seeds, 20 hot keys, 16 client threads, 200 warm-up requests, and 600 measured requests per run. Each standard-matrix case runs three times, with medians reported below. The full local run saves per-request records, run-level CSVs, aggregate JSON, environment metadata, and JAR/script SHA-256 hashes.
+## Benchmark Correction and Current Evidence
 
-| Scenario (median) | TPS | Success rate | Mean | P95 | P99 | Stale-read rate |
-|---|---:|---:|---:|---:|---:|---:|
-| W3/R3, 50/50, no delay | 1,145.4 | 100% | 13.2ms | 36.3ms | 47.8ms | 0% |
-| W1/R1, 50/50, no delay | 1,549.0 | 100% | 10.0ms | 24.8ms | 38.0ms | 0.67% (median) |
-| W5/R1, 50/50, no delay | 1,076.3 | 100% | 14.6ms | 31.6ms | 38.2ms | 0% |
-| W1/R5, 50/50, no delay | 990.2 | 100% | 15.7ms | 32.4ms | 46.0ms | 0% |
-| W3/R3, 50ms replication delay | 355.6 | 99.83% | 43.9ms | 87.2ms | 95.4ms | 0% |
-| W3/R3, 200ms replication delay | 144.4 | 100% | 108.0ms | 230.4ms | 237.5ms | 0% |
-| W3/R3, one slow peer | 123.3 | 100% | 124.0ms | 375.9ms | 469.8ms | 0% |
-| W3/R3, one unreachable peer | 1,249.7 | 100% | 12.2ms | 25.4ms | 34.1ms | 0% |
+The legacy benchmark is withdrawn. In case 10 (W=5 with one allegedly unreachable replica), repetition 0 recorded 298 writes returning 201. This contradicts the intended scenario, not necessarily the controller: the harness killed a launch process without proving the serving JVM/port had stopped. The Oracle javapath executable can be a launcher. The old run did not record server PID or effective quorum configuration, so the exact historical cause cannot be established.
 
-W1/R1 permits replication lag to be visible through local reads, producing a nonzero stale-read rate. No stale reads were observed in the higher-quorum cases in this finite matrix. An observed 0% is not a theoretical guarantee.
+Artifact provenance was also ambiguous. The recorded benchmark JAR had SHA-256 `a7ee3a23a6b51b4874532fd3f72eec915f6603e34e9250e163ef21f0ca506472`; a packaged JAR remaining in the original local project had SHA-256 `3d75b614df58317180f01a00dece0bb3eb44404b0dc45d427bff83b466d91bcc` and lacked the improved controller's `ReplicaRead` class. Archive hash differences alone can reflect packaging metadata, but these artifacts also had different controller bytecode.
 
-In the matched high-delay comparison—200ms replication delay, 200ms leader write delay, and 50ms read delay—the original JAR achieves median TPS of 44.1 versus 64.5 for the improved JAR, approximately 46.2% higher. Mean latency falls from 353.7ms to 244.1ms and P95 from 649.7ms to 433.3ms. Local JVM scheduling affects this comparison; it is demonstration evidence, not a cross-machine capacity commitment.
+The corrected harness:
 
-Some high-concurrency repetitions have transient request failures. All success rates are retained in the aggregate evidence; no anomalous repetitions were removed to improve results. A next-stage experiment should add controlled arrival rates, client failure/retry classification, and server executor metrics.
+- Builds current source with Maven package (including Java tests) by default.
+- Requires an explicit expected SHA-256 when skipping a build or using a custom artifact.
+- Resolves java.home/bin/java and checks that the serving PID equals the owned process PID.
+- Verifies effective role, W/R, timeout, and replication delay through /health.
+- Confirms the failed replica's process exit, closed listening port, and failed HTTP health request.
+- Rejects insufficient/misconfigured 201 acknowledgements and any non-503 write in the verified W=5/unreachable case.
+- Preserves complete response bodies and validates shutdown; refuses changed JAR/source/harness files.
+- Writes provenance before measurement and uses command-scoped Git directory trust, avoiding a late metadata failure.
+
+A full corrected workload ran 12 cases × 3 repetitions with 600 measured requests, 200 warm-up requests, 20 hot keys, and 16 threads. The decisive W=5/unreachable result was:
+
+| Repetition | Measured writes | HTTP 201 | HTTP 503 |
+|---|---:|---:|---:|
+| 0 | 298 | 0 | 298 |
+| 1 | 300 | 0 | 300 |
+| 2 | 283 | 0 | 283 |
+| Total | 881 | 0 | 881 |
+
+All initialization/warm-up writes also passed the non-201 invariant. Mixed read/write success rate must not be interpreted as write success rate. No acknowledged writes exist in this case, so stale-read eligibility is zero and stale rate is undefined, not 0%.
+
+The full run completed all workloads and shutdown checks, but final Git provenance collection failed because the elevated user did not trust the sandbox-owned checkout. Its status note explicitly records that limitation. The final harness fixes provenance collection before measurement and is separately checked in `evidence/benchmark-quorum-regression/`.
+
+The final end-to-end regression completed successfully with `status=verified`: three repetitions, 120 measured requests and 20 warm-up requests per repetition, five hot keys, and 16 threads. Its 186 measured writes (63/63/60) all returned 503, with zero 201 responses. Recorded JAR SHA-256 is `8ae483e47468cedd772915ea61e60e49b498271e67e8da0e63a42e5c5e7a9e6c`; harness SHA-256 is `9fedeec6aa418d9b04e1c45c8ae20806f964c752d8a275584b5090fdeaa24c4f`. Both match the final local artifacts.
+
+The previous 46.2% performance uplift and legacy performance table are withdrawn. A valid comparative uplift requires remeasuring both implementations with equivalent verified identity/configuration and workloads. Some corrected load repetitions still contain request failures; these are retained rather than removed and do not imply a quorum violation.
 
 ## Reproduction and Evidence
 
 ```powershell
 cd node
 mvn test
-mvn package
 cd ..
-python benchmark.py --requests 600 --warmup 200 --output evidence/benchmark
+python -m unittest -v test_benchmark
+python benchmark.py --requests 600 --warmup 200 --output evidence/benchmark-new
+python benchmark.py --cases 10 --output evidence/quorum-new
 ```
 
-- Matrix aggregates: `evidence/benchmark-final/summary.json`
-- Run-level measurements: `evidence/benchmark-final/results.csv`
-- Environment and hashes: `evidence/benchmark-final/environment.json`
-- Original-implementation comparison: `evidence/baseline-benchmark/`
-- Automated tests: `node/src/test/java/com/kv/node/`
+Output directories must be empty. Compact evidence and provenance are retained in the repository; detailed request records, startup/fault proofs, and node logs remain local under each case directory.
 
-The GitHub repository includes compact summaries and environment metadata. Per-request records and node logs remain in the full local project and are excluded from the upload. Running the benchmark regenerates these detailed outputs.
+The recorded source commit is the checkout's base commit at measurement time, with local source changes identified by the recorded file hashes. These historical provenance values are not rewritten to the later publishing commit. `validation.json` publishes the decisive write counts and a compact fault-proof extract without uploading raw request logs.
+
+- Corrected full-workload results: `evidence/benchmark-verified/results.csv`, `summary.json`, and `EVIDENCE_STATUS.md`
+- Final harness regression: `evidence/benchmark-quorum-regression/`
+- Withdrawn historical evidence: status notes in `evidence/benchmark-final/` and `evidence/baseline-benchmark/`
+- Four harness regression tests: `test_benchmark.py`
 
 ## Remaining Boundaries
 

@@ -1,0 +1,18 @@
+[
+  {
+    "case": 10,
+    "write_delay": 0,
+    "read_delay": 0,
+    "w": 5,
+    "r": 1,
+    "write_ratio": 0.5,
+    "delay": 0,
+    "fault": "unreachable",
+    "median_tps": 56.04219641146369,
+    "median_successful_tps": 21.043052896797988,
+    "median_success_rate": 0.38333333333333336,
+    "median_mean_ms": 230.49347583437338,
+    "median_p95_ms": 2043.1291999993846,
+    "median_p99_ms": 2051.1822000262327
+  }
+]

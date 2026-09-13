@@ -128,7 +128,10 @@ public class KvController implements AutoCloseable {
 
     @GetMapping("/health")
     public Map<String,Object> health() {
-        return Map.of("status","up","role",config.role,"failedReplications",failedReplications.get(),
+        return Map.of("status","up","role",config.role,"pid",ProcessHandle.current().pid(),
+                "writeQuorum",config.writeQuorum,"readQuorum",config.readQuorum,
+                "timeoutMs",config.timeoutMs,"replicationDelayMs",config.replicationDelayMs,
+                "failedReplications",failedReplications.get(),
                 "queuedTasks",fanout.getQueue().size(),"activeTasks",fanout.getActiveCount());
     }
 

@@ -1,4 +1,6 @@
 {
+  "status": "unverified_legacy",
+  "reason": "Legacy harness lacks JVM identity and shutdown verification; performance uplift claims withdrawn.",
   "platform": "Windows-11-10.0.26100-SP0",
   "python": "3.12.14",
   "cpu_count": 20,
