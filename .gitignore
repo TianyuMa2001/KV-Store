@@ -36,3 +36,22 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Additional publishing exclusions
+# Maven / build
+target/
+**/target/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Benchmark outputs: publish compact summaries, keep raw request logs local
+evidence/**/case*/
+evidence/benchmark-18180/
+evidence/baseline/node-baseline.jar
+__pycache__/
+*.pyc

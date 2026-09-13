@@ -13,7 +13,11 @@ public class NodeApplication {
 
     // Provides a RestClient the leader uses to send requests to followers
     @Bean
-    public RestClient restClient() {
-        return RestClient.create();
+    public RestClient restClient(Config config) {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(config.timeoutMs);
+        factory.setReadTimeout(config.timeoutMs);
+        return RestClient.builder().requestFactory(factory).build();
     }
 }

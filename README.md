@@ -5,8 +5,10 @@ A distributed key-value store built on **leader/follower replication with quorum
 ## Architecture
 
 - **A single node program** (`node/`) whose role is decided by the `ROLE` environment variable: **leader** or **follower**.
-- **Writes** always go to the leader: the leader assigns a version number, writes locally first, then replicates to followers one by one until it has collected **W** acknowledgements (including its own), at which point it returns success.
-- **Reads** can hit any node: with `R=1` the node reads locally only; with `R>1` the coordinating node reads itself and queries `R-1` followers, then returns the value with the **highest version**.
+- **Writes** always go to the leader: version allocation and local installation are atomic per key. Replication fans out to all followers in parallel; the leader responds after **W** acknowledgements (including itself), while already-submitted replication continues.
+- **Reads** can hit any node: with `R=1` the node reads locally; with `R>1` the coordinator queries peers in parallel, requires **R reachable responses**, and returns the value with the highest version.
+- **Timeouts are explicit**: a write that misses quorum returns `503` with `status=indeterminate` and `localApplied=true`; a read that cannot reach R nodes returns `503`.
+- **Followers are monotonic**: older versions cannot overwrite newer values, and a conflicting value at the same version is rejected with `409`.
 - Storage is an in-process `ConcurrentHashMap` (no persistence — data is lost on restart).
 - Artificial delays simulate a real system: followers `sleep 200ms` on replicate, the leader `sleep 200ms` after a write, and reads `sleep 50ms`.
 
@@ -20,6 +22,7 @@ A distributed key-value store built on **leader/follower replication with quorum
 | `GET` | `/kv/{key}` | Quorum read: collect from R nodes and return the newest version |
 | `GET` | `/local_read/{key}` | Read this node only (no read delay; used for testing) |
 | `PUT` | `/replicate` | Internal endpoint: follower receives replication from the leader |
+| `GET` | `/health` | Role, failed replication count, queued and active fan-out tasks |
 
 A successful write returns `201 {"key":..., "version":...}`; if the write quorum isn't reached it returns `503`.
 
@@ -31,6 +34,11 @@ A successful write returns `201 {"key":..., "version":...}`; if the write quorum
 | `FOLLOWER_URLS` | empty | Other node URLs, comma-separated (leader uses these for replication and read fan-out) |
 | `WRITE_QUORUM_SIZE` | `1` | Write quorum W |
 | `READ_QUORUM_SIZE` | `1` | Read quorum R |
+| `QUORUM_TIMEOUT_MS` | `1000` | End-to-end quorum deadline and peer HTTP timeout |
+| `REPLICATION_DELAY_MS` | `200` | Artificial follower replication delay |
+| `WRITE_DELAY_MS` | `200` | Artificial leader write delay |
+| `READ_DELAY_MS` | `50` | Artificial quorum-read delay |
+| `FANOUT_THREADS` | `64` | Bounded fan-out executor thread count |
 
 ## Running
 
@@ -61,21 +69,19 @@ cd node
 ./mvnw spring-boot:run
 ```
 
-## Load testing
-
-`LoadTester` is a standalone `main` program (a multi-threaded HTTP load test) that lets you vary the read/write ratio and reports stale reads, throughput, and latency (avg / P99).
-
-Adjust the parameters at the top of `LoadTester.java`:
-- `WRITE_RATIO` — write ratio (e.g. `0.01 / 0.10 / 0.50 / 0.90`)
-- `QUORUM_READ` — `true` hits `/kv` (quorum read, checks whether stale reads are eliminated); `false` hits `/local_read` (single node, observes inter-node lag)
-- `THREADS` / `TOTAL_REQUESTS` / `KEY_POOL_SIZE`
-
-With the cluster running:
+## Correctness tests and benchmark
 
 ```bash
 cd node
-./mvnw compile exec:java -Dexec.mainClass=com.kv.node.LoadTester
+./mvnw test
+./mvnw package
+cd ..
+python benchmark.py --requests 600 --warmup 200 --output evidence/benchmark
 ```
+
+The 10 tests cover concurrent same-key writes, stale/out-of-order replication, slow and unreachable peers, W=1 fan-out, timeout/partial-write semantics, absent-key quorum reads, newest-version selection, invalid inputs, and Spring startup.
+
+`benchmark.py` starts five real JVMs and runs a deterministic, repeated matrix over W/R, read/write ratio, artificial delay, and slow/unreachable faults. It records TPS, successful TPS, mean/P95/P99 latency, success rate, stale-read rate, per-request evidence, node logs, environment metadata, and hashes. See `IMPROVEMENT_REPORT.md` for the measured results and limitations.
 
 ## Project layout
 
@@ -92,3 +98,5 @@ KV-Store/
         ├── VersionedValue.java   # value with a version number
         └── LoadTester.java       # load-testing tool
 ```
+
+The original `LoadTester.java` remains as a small manual client; `benchmark.py` is the reproducible comparison harness.
