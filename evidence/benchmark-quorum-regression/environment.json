@@ -1,0 +1,44 @@
+{
+  "status": "verified",
+  "source_commit": "a863d1b5f8a4d4b43e4a14700b796dacc2f0101e",
+  "source_files_sha256": {
+    "node\\pom.xml": "a7556e64e0e6847667a1a860a41a6482ba1b936b490afc94bdf92648b24ba56a",
+    "node\\src\\main\\resources\\application.properties": "f86ecdb946ac201a340ba66171f7415eca5dd1ab5b9c953b1fdb768a91ab69a6",
+    "node\\src\\main\\java\\com\\kv\\node\\Config.java": "dcbf6037a6aca9500f02c677068c2be8bf7931811572ef56d6192e635b69d934",
+    "node\\src\\main\\java\\com\\kv\\node\\Dto.java": "b5cd45c1b2089875d0baae3186cbb8c83438d8603b29d3edab6201f04432ca1e",
+    "node\\src\\main\\java\\com\\kv\\node\\KvController.java": "753b032014e8d375629555a337d30255c7816af08bbf4369f4fe18040e5c4b01",
+    "node\\src\\main\\java\\com\\kv\\node\\LoadTester.java": "81e8c372a1f0171d7ca82fc07e165067782e3c60ea40a7e219ad55336e2eadf7",
+    "node\\src\\main\\java\\com\\kv\\node\\NodeApplication.java": "db75a40efe601271a918cb8c60f25b3baa2e64cdef54b64f540a5dec7bc19e5c",
+    "node\\src\\main\\java\\com\\kv\\node\\VersionedValue.java": "f1b4c473f78420952d1315e72a5fe2af819809cbdba7da33a40d715263f002b7",
+    "node\\src\\test\\java\\com\\kv\\node\\KvCorrectnessTests.java": "5eba8c6feea21346c87f09505f718b6df43cfac427260968e52494f500a557dc",
+    "node\\src\\test\\java\\com\\kv\\node\\KvReplicationTests.java": "83d5639d1f8de45c0be82b85abb118d4ad874826a7e469b27aa79454845c0ab7",
+    "node\\src\\test\\java\\com\\kv\\node\\NodeApplicationTests.java": "4cc9e296b701600ccd7c2e32636b1d778dc7c80e63696752a917d51890a57cd4"
+  },
+  "platform": "Windows-11-10.0.26100-SP0",
+  "python": "3.12.14",
+  "cpu_count": 20,
+  "java": "java version \"17.0.17\" 2025-10-21 LTS\nJava(TM) SE Runtime Environment (build 17.0.17+8-LTS-360)\nJava HotSpot(TM) 64-Bit Server VM (build 17.0.17+8-LTS-360, mixed mode, sharing)\n",
+  "args": {
+    "jar": "D:\\2025MTY\\Projects\\Properties\\github-workspaces\\distributed-kv-store\\node\\target\\node-0.0.1-SNAPSHOT.jar",
+    "output": "evidence\\benchmark-quorum-regression",
+    "java": "C:\\Program Files\\Java\\jdk-17\\bin\\java.exe",
+    "port": 20380,
+    "threads": 16,
+    "keys": 5,
+    "requests": 120,
+    "warmup": 20,
+    "repeats": 3,
+    "seed": 42,
+    "timeout_ms": 1000,
+    "read_mode": "quorum",
+    "full": false,
+    "baseline": false,
+    "cases": [
+      10
+    ],
+    "skip_build": false,
+    "expected_jar_sha256": null
+  },
+  "jar_sha256": "8ae483e47468cedd772915ea61e60e49b498271e67e8da0e63a42e5c5e7a9e6c",
+  "benchmark_sha256": "9fedeec6aa418d9b04e1c45c8ae20806f964c752d8a275584b5090fdeaa24c4f"
+}

@@ -1,0 +1,18 @@
+{
+  "status": "verified",
+  "case": 10,
+  "write_quorum": 5,
+  "fault": "unreachable",
+  "measured_write_counts_by_repetition": [63, 63, 60],
+  "measured_writes_total": 186,
+  "http_201": 0,
+  "http_503": 186,
+  "fault_proof_extract": {
+    "port": 20481,
+    "pid": 78632,
+    "process_exit": 1,
+    "listening": false,
+    "http_status": 0
+  },
+  "source": "Local case10/raw_0.json, raw_1.json, raw_2.json and fault.json; raw case files are excluded from publishing."
+}

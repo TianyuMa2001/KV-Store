@@ -1,4 +1,7 @@
 {
+  "status": "withdrawn",
+  "reason": "Fault process termination was not verified at the listening port; JVM identity/effective configuration were not recorded.",
+  "superseded_by": "evidence/benchmark-verified",
   "platform": "Windows-11-10.0.26100-SP0",
   "python": "3.12.14",
   "cpu_count": 20,

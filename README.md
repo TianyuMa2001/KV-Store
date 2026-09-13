@@ -100,3 +100,9 @@ KV-Store/
 ```
 
 The original `LoadTester.java` remains as a small manual client; `benchmark.py` is the reproducible comparison harness.
+
+## Benchmark correction
+
+Legacy results in `evidence/benchmark-final` and the previous 46.2% uplift claim are withdrawn: killing a Java launcher did not prove a replica was unreachable. The corrected harness builds a fresh JAR, verifies JVM PID/effective quorum settings, asserts the faulted port is down, and rejects quorum-inconsistent write responses. Skipping a build requires `--skip-build --expected-jar-sha256 HASH`.
+
+Run `python -m unittest -v test_benchmark` for harness checks. Use an empty output directory for each run; `--cases 10` selects W=5 with one unreachable peer. See `IMPROVEMENT_REPORT.md` for the correction and evidence status.
